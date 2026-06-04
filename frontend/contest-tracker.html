@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Contest Tracker - CodeTracker</title>
+  <meta name="description" content="Track upcoming coding contests from LeetCode, Codeforces, CodeChef, and AtCoder. Never miss a contest." />
+  <link rel="icon" href="assets/images/favicon.svg" type="image/svg+xml" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="assets/css/custom.css" />
+</head>
+<body class="dark">
+<script>
+  document.body.className = localStorage.getItem('codetracker_theme') || 'dark';
+</script>
+<div id="toast-container"></div>
+
+<!-- ─── Navbar ───────────────────────────────────────────────────────────────── -->
+<nav class="navbar">
+  <a href="index.html" class="navbar-brand">
+    <div class="logo-icon">⚡</div>
+    <span class="gradient-text">CodeTracker</span>
+  </a>
+  <div class="nav-links" id="nav-links">
+    <a href="index.html" class="nav-link">Home</a>
+    <a href="contest-tracker.html" class="nav-link active">Contests</a>
+  </div>
+  <div class="flex items-center gap-2">
+    <div id="auth-buttons" class="flex items-center gap-2">
+      <a href="login.html" class="btn btn-ghost btn-sm">Login</a>
+      <a href="login.html?tab=register" class="btn btn-primary btn-sm">Sign Up</a>
+    </div>
+    <div id="user-menu" class="flex items-center gap-2" style="display:none!important;">
+      <a href="dashboard.html" class="btn btn-secondary btn-sm">Dashboard</a>
+      <div class="dropdown" id="user-dropdown">
+        <button id="user-menu-trigger" class="flex items-center gap-2" style="background:none;border:none;cursor:pointer;">
+          <img id="user-avatar" src="" class="avatar avatar-sm" style="display:none" alt="avatar"/>
+          <div id="user-initials" class="avatar-placeholder avatar-sm" style="font-size:0.75rem">U</div>
+          <span id="user-name" style="font-size:0.875rem;font-weight:500;color:var(--text-secondary)"></span>
+        </button>
+        <div class="dropdown-menu">
+          <a href="dashboard.html" class="dropdown-item">📊 Dashboard</a>
+          <a href="admin.html" class="dropdown-item" id="admin-portal-link" style="display:none">🛡️ Admin Portal</a>
+          <div class="divider"></div>
+          <div class="dropdown-item" data-logout style="color:var(--danger)">🚪 Logout</div>
+        </div>
+      </div>
+    </div>
+    <button class="theme-toggle-btn btn btn-ghost btn-sm px-2.5" title="Toggle Theme">☀️</button>
+  </div>
+</nav>
+
+<!-- ─── Main Content ──────────────────────────────────────────────────────────── -->
+<main style="max-width:1100px;margin:0 auto;padding:32px 24px;">
+
+  <!-- Header -->
+  <div style="margin-bottom:32px;text-align:center;">
+    <h1 style="font-size:clamp(1.8rem,4vw,2.5rem);font-weight:800;margin-bottom:8px;">
+      🏆 Upcoming <span class="gradient-text">Coding Contests</span>
+    </h1>
+    <p style="color:var(--text-secondary);font-size:0.95rem;">
+      Live data from LeetCode, Codeforces, and CodeChef. <span style="color:var(--text-primary);font-weight:600;" id="contest-count">—</span> upcoming contests.
+    </p>
+  </div>
+
+  <!-- Tabs (visible when logged in) -->
+  <div class="flex justify-center gap-4 mb-8" id="tracker-tabs" style="display:none;">
+    <button id="btn-tab-upcoming" class="px-4 py-2 rounded-lg font-semibold bg-indigo-600 text-white transition-all">🏆 Upcoming Contests</button>
+    <button id="btn-tab-attendance" class="px-4 py-2 rounded-lg font-semibold bg-gray-800 text-gray-400 hover:text-white transition-all">📋 My Attendance</button>
+  </div>
+
+  <!-- Upcoming Contests Section -->
+  <div id="upcoming-section">
+    <!-- Platform Filters -->
+    <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-bottom:28px;">
+      <button class="filter-pill platform-filter active" data-platform="">🌐 All</button>
+      <button class="filter-pill platform-filter" data-platform="LeetCode">⚡ LeetCode</button>
+      <button class="filter-pill platform-filter" data-platform="CodeForces">🔵 Codeforces</button>
+      <button class="filter-pill platform-filter" data-platform="CodeChef">👨‍🍳 CodeChef</button>
+      <button class="filter-pill platform-filter" data-platform="AtCoder">🔴 AtCoder</button>
+    </div>
+
+    <!-- Refresh Button -->
+    <div style="text-align:right;margin-bottom:16px;">
+      <button onclick="loadContests(activeFilter)" class="btn btn-secondary btn-sm">🔄 Refresh</button>
+    </div>
+
+    <!-- Contests Grid -->
+    <div id="contests-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;">
+      <div class="skeleton" style="height:160px;border-radius:12px;"></div>
+      <div class="skeleton" style="height:160px;border-radius:12px;"></div>
+      <div class="skeleton" style="height:160px;border-radius:12px;"></div>
+    </div>
+  </div>
+
+  <!-- Attendance Section -->
+  <div id="attendance-section" style="display:none;">
+    <div class="glass-card" style="padding:24px; max-width:850px; margin:0 auto; border-radius:16px;">
+      <h2 class="text-xl font-bold mb-2 flex items-center gap-2 text-white">📋 My Attendance History</h2>
+      <p class="text-gray-400 text-sm mb-6">These are your contest attendances detected automatically by CodeTracker. No action is required on your part.</p>
+      
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="border-b border-gray-800 text-gray-400 text-sm font-semibold">
+              <th class="py-3 px-4">Contest Name</th>
+              <th class="py-3 px-4">Platform</th>
+              <th class="py-3 px-4">Date Attended</th>
+              <th class="py-3 px-4">Detection Method</th>
+            </tr>
+          </thead>
+          <tbody id="attendance-list-body">
+            <tr>
+              <td colspan="4" class="text-center py-8 text-gray-500">Loading your attendance history...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- Footer -->
+<footer style="text-align:center;padding:32px;border-top:1px solid var(--border);color:var(--text-muted);font-size:0.8rem;">
+  Contest data powered by LeetCode · Codeforces · CodeChef · AtCoder
+</footer>
+
+<script src="assets/js/api.js"></script>
+<script src="assets/js/auth.js"></script>
+<script src="assets/js/contest-tracker.js"></script>
+</body>
+</html>

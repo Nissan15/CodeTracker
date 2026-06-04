@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard - CodeTracker</title>
+  <meta name="description"
+    content="Your coding analytics dashboard. Track LeetCode, Codeforces, CodeChef, and AtCoder stats in one place." />
+  <link rel="icon" href="assets/images/favicon.svg" type="image/svg+xml" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="assets/css/custom.css" />
+</head>
+
+<body class="dark">
+<script>
+  document.body.className = localStorage.getItem('CodeTracker_theme') || 'dark';
+</script>
+  <div id="toast-container"></div>
+
+  <!-- ─── Navbar ───────────────────────────────────────────────────────────────── -->
+  <nav class="navbar">
+    <a href="index.html" class="navbar-brand">
+      <div class="logo-icon">⚡</div>
+      <span class="gradient-text">CodeTracker</span>
+    </a>
+    <div class="flex items-center gap-2">
+      <div id="auth-buttons" class="flex items-center gap-2" style="display:none!important;"></div>
+      <div id="user-menu" class="flex items-center gap-2" style="display:none!important;">
+        <div class="dropdown" id="user-dropdown">
+          <button id="user-menu-trigger" class="flex items-center gap-2 cursor-pointer"
+            style="background:none;border:none;">
+            <img id="user-avatar" src="" class="avatar avatar-sm" alt="avatar" style="display:none" />
+            <div id="user-initials" class="avatar-placeholder avatar-sm" style="font-size:0.75rem">U</div>
+            <span id="user-name" style="font-size:0.875rem;font-weight:500;color:var(--text-secondary)"></span>
+            <span style="color:var(--text-muted);font-size:0.7rem;">▼</span>
+          </button>
+          <div class="dropdown-menu">
+            <a href="profile.html" class="dropdown-item">👤 My Profile</a>
+            <a href="profile.html#settings" class="dropdown-item">⚙️ Settings</a>
+            <div class="divider"></div>
+            <div class="dropdown-item" data-logout style="color:var(--danger)">🚪 Logout</div>
+          </div>
+        </div>
+      </div>
+      <button class="theme-toggle-btn btn btn-ghost btn-sm px-2.5" title="Toggle Theme">☀️</button>
+      <button id="mobile-menu-btn" class="mobile-menu-btn btn btn-ghost btn-sm">☰</button>
+    </div>
+  </nav>
+
+  <div style="display:flex;">
+    <!-- ─── Sidebar ─────────────────────────────────────────────────────────────── -->
+    <aside class="sidebar" id="sidebar">
+      <nav>
+        <a href="dashboard.html" class="sidebar-item active"><span class="icon">📊</span> Dashboard</a>
+        <a href="contest-tracker.html" class="sidebar-item"><span class="icon">🏆</span> Contests</a>
+        <a href="profile.html" class="sidebar-item"><span class="icon">👤</span> My Profile</a>
+        <a href="admin.html" class="sidebar-item" id="admin-portal-link" style="display:none"><span class="icon">🛡️</span> Admin Portal</a>
+      </nav>
+      <div class="divider" style="margin:16px 0;"></div>
+      <div style="padding:0 4px;">
+        <p
+          style="font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;">
+          Share Profile</p>
+        <div style="display:flex;gap:6px;">
+          <input id="profile-share-link" readonly class="form-input" style="font-size:0.75rem;padding:6px 10px;"
+            value="" />
+          <button onclick="copyProfileLink()" class="btn btn-secondary btn-sm" title="Copy link">📋</button>
+        </div>
+      </div>
+      <div class="divider" style="margin:16px 0;"></div>
+      <button data-logout class="sidebar-item"
+        style="width:100%;text-align:left;background:none;border:none;color:var(--danger);cursor:pointer;">
+        <span class="icon">🚪</span> Logout
+      </button>
+    </aside>
+
+    <!-- ─── Main Content ───────────────────────────────────────────────────────── -->
+    <main class="main-content">
+
+      <!-- Header -->
+      <div style="margin-bottom:28px;">
+        <h1 id="user-greeting" style="font-size:1.6rem;font-weight:800;margin-bottom:4px;">Dashboard</h1>
+        <p style="color:var(--text-muted);font-size:0.875rem;">Your coding analytics across LeetCode, Codeforces,
+          CodeChef, and AtCoder.</p>
+      </div>
+
+      <!-- Quick Stats Grid -->
+      <div class="grid-4 stagger-children" style="margin-bottom:28px;">
+        <div class="stat-card" id="stat-1">
+          <div class="skeleton" style="height:60px;border-radius:8px;"></div>
+        </div>
+        <div class="stat-card" id="stat-2">
+          <div class="skeleton" style="height:60px;border-radius:8px;"></div>
+        </div>
+        <div class="stat-card" id="stat-3">
+          <div class="skeleton" style="height:60px;border-radius:8px;"></div>
+        </div>
+        <div class="stat-card" id="stat-4">
+          <div class="skeleton" style="height:60px;border-radius:8px;"></div>
+        </div>
+      </div>
+
+      <!-- Platform Stats -->
+      <div style="margin-bottom:28px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <h2 style="font-size:1rem;font-weight:700;">🌐 Platform Stats</h2>
+          <button onclick="refreshAllPlatforms()" id="refresh-all-btn" class="btn btn-primary btn-sm">🔄 Refresh
+            All</button>
+        </div>
+        <div id="platform-stats-grid"
+          style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;">
+          <div class="skeleton" style="height:200px;border-radius:12px;"></div>
+          <div class="skeleton" style="height:200px;border-radius:12px;"></div>
+          <div class="skeleton" style="height:200px;border-radius:12px;"></div>
+        </div>
+      </div>
+
+      <!-- Upcoming Contests Preview -->
+      <div class="glass-card" style="padding:20px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <h2 style="font-size:1rem;font-weight:700;">🏆 Upcoming Contests</h2>
+          <a href="contest-tracker.html" class="btn btn-secondary btn-sm">View All →</a>
+        </div>
+        <div id="upcoming-contests-preview">
+          <div class="skeleton" style="height:60px;border-radius:8px;margin-bottom:8px;"></div>
+          <div class="skeleton" style="height:60px;border-radius:8px;margin-bottom:8px;"></div>
+          <div class="skeleton" style="height:60px;border-radius:8px;"></div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/dashboard.js"></script>
+  <script>
+    function copyProfileLink() {
+      const input = document.getElementById('profile-share-link');
+      input.select();
+      navigator.clipboard.writeText(input.value).then(() => showToast('Profile link copied!', 'success'));
+    }
+
+    async function refreshAllPlatforms() {
+      const btn = document.getElementById('refresh-all-btn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Refreshing...';
+      try {
+        await API.platformAPI.refreshAll();
+        showToast('All platform stats refreshed! ✅', 'success');
+        loadDashboard();
+      } catch (err) {
+        showToast(`Refresh failed: ${err.message}`, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '🔄 Refresh All';
+      }
+    }
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CodeTracker - Your All-in-One Coding Portfolio Tracker</title>
+  <meta name="description" content="CodeTracker is the ultimate coding portfolio tracker. Track your DSA progress, showcase your coding portfolio across LeetCode, Codeforces, CodeChef, and never miss a coding contest." />
+  <meta name="keywords" content="coding portfolio tracker, DSA tracker, LeetCode tracker, Codeforces, coding contest, question tracker" />
+  <meta property="og:title" content="CodeTracker - Your All-in-One Coding Portfolio Tracker" />
+  <meta property="og:description" content="Track your DSA progress, showcase your portfolio, and never miss a contest." />
+  <link rel="icon" href="assets/images/favicon.svg" type="image/svg+xml" />
+  <!-- Tailwind CSS v3 CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary: '#6366f1',
+            secondary: '#8b5cf6',
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="assets/css/custom.css" />
+</head>
+<body class="dark">
+<script>
+  document.body.className = localStorage.getItem('codetracker_theme') || 'dark';
+</script>
+
+<!-- ─── Toast Container ──────────────────────────────────────────────────────── -->
+<div id="toast-container"></div>
+
+<!-- ─── Navbar ───────────────────────────────────────────────────────────────── -->
+<nav class="navbar">
+  <a href="index.html" class="navbar-brand">
+    <div class="logo-icon">⚡</div>
+    <span class="gradient-text">CodeTracker</span>
+  </a>
+
+  <div class="nav-links" id="nav-links">
+    <a href="#features" class="nav-link">Features</a>
+    <a href="#platforms" class="nav-link">Platforms</a>
+    <a href="contest-tracker.html" class="nav-link">Contests</a>
+    <a href="#faq" class="nav-link">FAQ</a>
+  </div>
+
+  <div class="flex items-center gap-2">
+    <!-- Not logged in -->
+    <div id="auth-buttons" class="flex items-center gap-2">
+      <a href="login.html" class="btn btn-ghost btn-sm">Login</a>
+      <a href="login.html?tab=register" class="btn btn-primary btn-sm hidden-mobile">Get Started Free</a>
+    </div>
+
+    <!-- Logged in -->
+    <div id="user-menu" class="flex items-center gap-2" style="display:none!important;">
+      <a href="dashboard.html" class="btn btn-secondary btn-sm">Dashboard</a>
+      <div class="dropdown" id="user-dropdown">
+        <button id="user-menu-trigger" class="flex items-center gap-2 cursor-pointer" style="background:none;border:none;">
+          <img id="user-avatar" src="" class="avatar avatar-sm" alt="avatar" style="display:none" />
+          <div id="user-initials" class="avatar-placeholder avatar-sm" style="font-size:0.75rem">U</div>
+          <span id="user-name" style="font-size:0.875rem;font-weight:500;color:var(--text-secondary)"></span>
+        </button>
+        <div class="dropdown-menu">
+          <a href="dashboard.html" class="dropdown-item">📊 Dashboard</a>
+          <a href="profile.html" class="dropdown-item">👤 My Profile</a>
+          <div class="divider"></div>
+          <div class="dropdown-item" data-logout style="color:var(--danger)">🚪 Logout</div>
+        </div>
+      </div>
+    </div>
+
+    <button class="theme-toggle-btn btn btn-ghost btn-sm px-2.5" title="Toggle Theme">☀️</button>
+    <!-- Mobile -->
+    <button id="mobile-menu-btn" class="mobile-menu-btn btn btn-ghost btn-sm">☰</button>
+  </div>
+</nav>
+
+<!-- ─── Hero Section ──────────────────────────────────────────────────────────── -->
+<section class="hero-bg" style="padding: 100px 24px 80px; position:relative;">
+  <div style="max-width:1100px; margin:0 auto; text-align:center; position:relative; z-index:1;">
+
+    <!-- Badge -->
+    <div class="animate-fade-in" style="margin-bottom:24px;">
+      <span style="display:inline-flex;align-items:center;gap:8px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.3);border-radius:999px;padding:6px 16px;font-size:0.8rem;font-weight:600;color:var(--primary-light);">
+        ✨ The #1 Coding Portfolio Platform
+      </span>
+    </div>
+
+    <!-- Headline -->
+    <h1 class="animate-fade-in" style="font-size:clamp(2.5rem,6vw,5rem);font-weight:900;line-height:1.1;margin-bottom:24px;animation-delay:0.1s;">
+      Track. Improve. <br/>
+      <span class="gradient-text">Showcase Your Code.</span>
+    </h1>
+
+    <p class="animate-fade-in" style="font-size:clamp(1rem,2vw,1.2rem);color:var(--text-secondary);max-width:600px;margin:0 auto 40px;animation-delay:0.2s;line-height:1.8;">
+      Your all-in-one platform to track DSA progress, aggregate coding stats from LeetCode, Codeforces & more, and create a stunning portfolio for recruiters.
+    </p>
+
+    <!-- CTA Buttons -->
+    <div class="animate-fade-in flex justify-center gap-4 flex-wrap" style="animation-delay:0.3s;margin-bottom:60px;">
+      <a href="login.html?tab=register" class="btn btn-primary btn-lg" id="hero-cta">
+        🚀 Start for Free
+      </a>
+      <a href="#features" class="btn btn-ghost btn-lg">See Features →</a>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="animate-fade-in stagger-children" style="display:flex;justify-content:center;gap:48px;flex-wrap:wrap;animation-delay:0.4s;">
+      <div style="text-align:center;">
+        <div style="font-size:2rem;font-weight:800;color:var(--text-primary);" id="stat-users">50K+</div>
+        <div style="font-size:0.8rem;color:var(--text-muted);margin-top:4px;">Developers</div>
+      </div>
+      <div style="text-align:center;">
+        <div style="font-size:2rem;font-weight:800;color:var(--text-primary);">2M+</div>
+        <div style="font-size:0.8rem;color:var(--text-muted);margin-top:4px;">Questions Tracked</div>
+      </div>
+      <div style="text-align:center;">
+        <div style="font-size:2rem;font-weight:800;color:var(--text-primary);">6+</div>
+        <div style="font-size:0.8rem;color:var(--text-muted);margin-top:4px;">Platforms</div>
+      </div>
+      <div style="text-align:center;">
+        <div style="font-size:2rem;font-weight:800;color:var(--text-primary);">100%</div>
+        <div style="font-size:0.8rem;color:var(--text-muted);margin-top:4px;">Free</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── Platform Logos ─────────────────────────────────────────────────────────── -->
+<section id="platforms" style="padding:60px 24px;border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--bg-card);">
+  <div style="max-width:900px;margin:0 auto;text-align:center;">
+    <p style="font-size:0.8rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:32px;">Aggregate stats from your favorite platforms</p>
+    <div style="display:flex;align-items:center;justify-content:center;gap:48px;flex-wrap:wrap;">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+        <span style="font-size:2rem;">⚡</span>
+        <span style="font-size:0.8rem;color:#FFA116;font-weight:600;">LeetCode</span>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+        <span style="font-size:2rem;">🔵</span>
+        <span style="font-size:0.8rem;color:#1F8ACB;font-weight:600;">Codeforces</span>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+        <span style="font-size:2rem;">👨‍🍳</span>
+        <span style="font-size:0.8rem;color:#B9722D;font-weight:600;">CodeChef</span>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+        <span style="font-size:2rem;">🟢</span>
+        <span style="font-size:0.8rem;color:#2F8D46;font-weight:600;">GeeksforGeeks</span>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+        <span style="font-size:2rem;">⚪</span>
+        <span style="font-size:0.8rem;color:#888;font-weight:600;">AtCoder</span>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+        <span style="font-size:2rem;">🐙</span>
+        <span style="font-size:0.8rem;color:#f1f5f9;font-weight:600;">GitHub</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── Features Section ──────────────────────────────────────────────────────── -->
+<section id="features" style="padding:80px 24px;">
+  <div style="max-width:1100px;margin:0 auto;">
+
+    <div style="text-align:center;margin-bottom:56px;">
+      <h2 style="font-size:clamp(1.8rem,4vw,2.8rem);font-weight:800;margin-bottom:16px;">
+        Everything you need to <span class="gradient-text">level up</span>
+      </h2>
+      <p style="font-size:1rem;color:var(--text-secondary);max-width:500px;margin:0 auto;">
+        CodeTracker brings all your coding activities under one roof, so you can focus on what matters — improving.
+      </p>
+    </div>
+
+    <div class="stagger-children" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px;">
+
+      <div class="feature-card">
+        <div class="feature-icon">📊</div>
+        <h3>Unified Portfolio</h3>
+        <p>Automatically aggregates your coding stats from LeetCode, Codeforces, CodeChef and more into one beautiful shareable profile.</p>
+        <a href="login.html?tab=register" style="display:inline-flex;align-items:center;gap:4px;color:var(--primary-light);font-size:0.85rem;font-weight:600;margin-top:16px;">Create Profile →</a>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">👨‍🍳</div>
+        <h3>CodeChef Analytics</h3>
+        <p>Track your CodeChef rating, star badge, and problem-solving history. See your growth at a glance on your dashboard.</p>
+        <a href="dashboard.html" style="display:inline-flex;align-items:center;gap:4px;color:var(--primary-light);font-size:0.85rem;font-weight:600;margin-top:16px;">View Dashboard →</a>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">🏆</div>
+        <h3>Contest Tracker</h3>
+        <p>Never miss a coding contest. See all upcoming contests from LeetCode, Codeforces, and CodeChef with live countdowns.</p>
+        <a href="contest-tracker.html" style="display:inline-flex;align-items:center;gap:4px;color:var(--primary-light);font-size:0.85rem;font-weight:600;margin-top:16px;">View Contests →</a>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">🔄</div>
+        <h3>Live Stats Refresh</h3>
+        <p>Click refresh to instantly pull your latest stats from any platform. Your data is always up-to-date when you need it.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">🔗</div>
+        <h3>Shareable Profile</h3>
+        <p>Share your public profile URL with recruiters. Show off your consistency, ratings, and solved questions professionally.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">🏷️</div>
+        <h3>Smart Tags & Notes</h3>
+        <p>Organize questions with custom tags like "sliding-window", "dp", "graphs". Add detailed notes and link them across questions.</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ─── How It Works ──────────────────────────────────────────────────────────── -->
+<section style="padding:80px 24px;background:var(--bg-card);border-top:1px solid var(--border);">
+  <div style="max-width:900px;margin:0 auto;text-align:center;">
+    <h2 style="font-size:clamp(1.8rem,4vw,2.5rem);font-weight:800;margin-bottom:56px;">
+      Get started in <span class="gradient-text">3 simple steps</span>
+    </h2>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:32px;">
+      <div>
+        <div style="width:56px;height:56px;border-radius:50%;background:var(--gradient-primary);display:flex;align-items:center;justify-content:center;font-size:1.4rem;font-weight:800;margin:0 auto 16px;">1</div>
+        <h3 style="margin-bottom:8px;font-size:1rem;">Sign Up Free</h3>
+        <p style="font-size:0.875rem;">Create your account with Google or email in under a minute.</p>
+      </div>
+      <div>
+        <div style="width:56px;height:56px;border-radius:50%;background:var(--gradient-primary);display:flex;align-items:center;justify-content:center;font-size:1.4rem;font-weight:800;margin:0 auto 16px;">2</div>
+        <h3 style="margin-bottom:8px;font-size:1rem;">Link Your Profiles</h3>
+        <p style="font-size:0.875rem;">Add your LeetCode, Codeforces, and other usernames to your dashboard.</p>
+      </div>
+      <div>
+        <div style="width:56px;height:56px;border-radius:50%;background:var(--gradient-primary);display:flex;align-items:center;justify-content:center;font-size:1.4rem;font-weight:800;margin:0 auto 16px;">3</div>
+        <h3 style="margin-bottom:8px;font-size:1rem;">Track & Share</h3>
+        <p style="font-size:0.875rem;">Start tracking questions and share your portfolio with the world.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── FAQ Section ───────────────────────────────────────────────────────────── -->
+<section id="faq" style="padding:80px 24px;">
+  <div style="max-width:700px;margin:0 auto;">
+    <div style="text-align:center;margin-bottom:48px;">
+      <h2 style="font-size:clamp(1.8rem,4vw,2.5rem);font-weight:800;margin-bottom:12px;">Frequently Asked <span class="gradient-text">Questions</span></h2>
+    </div>
+
+    <div id="faq-list">
+      <div class="faq-item">
+        <div class="faq-question">How do I sign up? <span class="faq-chevron">▼</span></div>
+        <div class="faq-answer">Click "Get Started Free" on the homepage. You can sign up with Google OAuth for instant access or use your email and password. It only takes a minute!</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-question">Which platforms are supported? <span class="faq-chevron">▼</span></div>
+        <div class="faq-answer">We currently support LeetCode and Codeforces for live stats. Support for CodeChef, GeeksforGeeks, and AtCoder is coming soon. You can manually add questions from any platform in the Question Tracker.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-question">Is my profile public or private? <span class="faq-chevron">▼</span></div>
+        <div class="faq-answer">By default, your profile is public and shareable via a unique URL. You can toggle it to private in your profile settings at any time.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-question">How does the live stats refresh work? <span class="faq-chevron">▼</span></div>
+        <div class="faq-answer">Simply click the "Refresh" button on your dashboard to fetch the latest stats from LeetCode and Codeforces in real time. The data is fetched through our secure backend and cached for performance.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-question">Is CodeTracker free to use? <span class="faq-chevron">▼</span></div>
+        <div class="faq-answer">Yes, CodeTracker is completely free! Create an account, track unlimited questions, link your profiles, and share your portfolio — all at no cost.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── CTA Banner ─────────────────────────────────────────────────────────────── -->
+<section style="padding:80px 24px;background:linear-gradient(135deg,rgba(99,102,241,0.1),rgba(139,92,246,0.1));border-top:1px solid var(--border);">
+  <div style="max-width:600px;margin:0 auto;text-align:center;">
+    <h2 style="font-size:clamp(1.8rem,4vw,2.5rem);font-weight:800;margin-bottom:16px;">
+      Ready to <span class="gradient-text">build your portfolio?</span>
+    </h2>
+    <p style="color:var(--text-secondary);margin-bottom:32px;">Join thousands of developers who are tracking their progress and landing their dream jobs.</p>
+    <a href="login.html?tab=register" class="btn btn-primary btn-lg">
+      🚀 Create Free Account
+    </a>
+  </div>
+</section>
+
+<!-- ─── Footer ────────────────────────────────────────────────────────────────── -->
+<footer style="background:var(--bg-card);border-top:1px solid var(--border);padding:40px 24px;">
+  <div style="max-width:1100px;margin:0 auto;display:flex;flex-wrap:wrap;justify-content:space-between;gap:32px;">
+    <div style="max-width:280px;">
+      <div class="navbar-brand" style="margin-bottom:12px;">
+        <div class="logo-icon">⚡</div>
+        <span class="gradient-text" style="font-size:1.1rem;">CodeTracker</span>
+      </div>
+      <p style="font-size:0.85rem;line-height:1.7;">Your all-in-one coding portfolio tracker. Track. Improve. Showcase.</p>
+    </div>
+    <div style="display:flex;gap:48px;flex-wrap:wrap;">
+      <div>
+        <h4 style="font-size:0.8rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:12px;">Product</h4>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <a href="#features" style="font-size:0.875rem;color:var(--text-secondary);" class="nav-link" style="padding:0;">Features</a>
+          <a href="contest-tracker.html" style="font-size:0.875rem;color:var(--text-secondary);">Contests</a>
+        </div>
+      </div>
+      <div>
+        <h4 style="font-size:0.8rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:12px;">Account</h4>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <a href="login.html" style="font-size:0.875rem;color:var(--text-secondary);">Login</a>
+          <a href="login.html?tab=register" style="font-size:0.875rem;color:var(--text-secondary);">Register</a>
+          <a href="dashboard.html" style="font-size:0.875rem;color:var(--text-secondary);">Dashboard</a>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div style="max-width:1100px;margin:32px auto 0;padding-top:24px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+    <p style="font-size:0.8rem;color:var(--text-muted);">© 2025 CodeTracker. All rights reserved.</p>
+    <p style="font-size:0.8rem;color:var(--text-muted);">Built with ❤️ for developers</p>
+  </div>
+</footer>
+
+<script src="assets/js/api.js"></script>
+<script src="assets/js/auth.js"></script>
+<script>
+  // FAQ Accordion
+  document.querySelectorAll('.faq-question').forEach(q => {
+    q.addEventListener('click', () => {
+      const item = q.parentElement;
+      const isOpen = item.classList.contains('open');
+      document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
+      if (!isOpen) item.classList.add('open');
+    });
+  });
+
+  // Update hero CTA if logged in
+  document.addEventListener('DOMContentLoaded', () => {
+    if (Auth.isLoggedIn()) {
+      const cta = document.getElementById('hero-cta');
+      if (cta) { cta.href = 'dashboard.html'; cta.textContent = '📊 Go to Dashboard'; }
+    }
+  });
+</script>
+</body>
+</html>

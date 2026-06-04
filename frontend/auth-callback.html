@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Auth - CodeTracker</title>
+  <link rel="stylesheet" href="assets/css/custom.css" />
+</head>
+<body class="dark" style="min-height:100vh;display:flex;align-items:center;justify-content:center;">
+  <div style="text-align:center;">
+    <div class="logo-icon" style="width:56px;height:56px;border-radius:16px;font-size:1.6rem;margin:0 auto 16px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#6366f1,#8b5cf6);">⚡</div>
+    <h2 style="margin-bottom:8px;">Signing you in...</h2>
+    <p style="color:var(--text-muted);font-size:0.875rem;">Please wait while we set up your session.</p>
+    <div class="spinner" style="margin:20px auto;width:28px;height:28px;border-width:3px;"></div>
+  </div>
+
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script>
+    // Extract token from URL after Google OAuth redirect
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+    const error = params.get('error');
+
+    if (error) {
+      showToast('Authentication failed. Please try again.', 'error');
+      setTimeout(() => window.location.href = 'login.html?error=auth_failed', 1500);
+    } else if (token) {
+      // Store token, fetch user info
+      localStorage.setItem('codetracker_token', token);
+      API.authAPI.me().then(res => {
+        Auth.setSession(token, res.user);
+        showToast('Welcome to CodeTracker! 🎉', 'success');
+        setTimeout(() => window.location.href = 'dashboard.html', 800);
+      }).catch(() => {
+        Auth.clearSession();
+        window.location.href = 'login.html?error=auth_failed';
+      });
+    } else {
+      window.location.href = 'login.html';
+    }
+  </script>
+</body>
+</html>

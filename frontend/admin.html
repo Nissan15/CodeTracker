@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Portal - CodeTracker</title>
+  <meta name="description" content="CodeTracker Admin Portal. Manage users, track contest attendance automatically, compare departments, and download reports." />
+  <link rel="icon" href="assets/images/favicon.svg" type="image/svg+xml" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="assets/css/custom.css" />
+  <style>
+    /* Admin Portal Custom CSS Overrides */
+    .badge-platform {
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+    /* Modal styles */
+    .admin-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 15, 26, 0.85);
+      backdrop-filter: blur(8px);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+    .admin-modal-overlay.active {
+      opacity: 1;
+      pointer-events: all;
+    }
+    .admin-modal {
+      background: var(--bg-card-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      width: 95%;
+      max-width: 550px;
+      padding: 24px;
+      box-shadow: var(--shadow-lg);
+      transform: translateY(20px);
+      transition: transform 0.25s ease;
+    }
+    .admin-modal-overlay.active .admin-modal {
+      transform: translateY(0);
+    }
+    
+    /* Small visual refinements */
+    .platform-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    
+    /* Clean layout for printable HTML report */
+    @media print {
+      body {
+        background: white !important;
+        color: #000 !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body class="dark">
+<script>
+  document.body.className = localStorage.getItem('codetracker_theme') || 'dark';
+</script>
+  <div id="toast-container"></div>
+
+  <!-- ─── Navbar ───────────────────────────────────────────────────────────────── -->
+  <nav class="navbar no-print">
+    <div class="navbar-brand">
+      <div class="logo-icon">🛡️</div>
+      <span class="gradient-text">CodeTracker Admin</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <button class="theme-toggle-btn btn btn-ghost btn-sm px-2.5" title="Toggle Theme">☀️</button>
+      <button id="mobile-menu-btn" class="mobile-menu-btn btn btn-ghost btn-sm">☰</button>
+    </div>
+  </nav>
+
+  <div class="flex">
+    <!-- ─── Sidebar ─────────────────────────────────────────────────────────────── -->
+    <aside class="sidebar no-print" id="sidebar">
+      <nav class="flex flex-col gap-1">
+        <div class="sidebar-item active cursor-pointer" data-view="overview">
+          <span class="icon">📊</span> Overview
+        </div>
+        <div class="sidebar-item cursor-pointer" data-view="users">
+          <span class="icon">👥</span> Users
+        </div>
+        <div class="sidebar-item cursor-pointer" data-view="contests">
+          <span class="icon">🏆</span> Contest Analytics
+        </div>
+        <div class="sidebar-item cursor-pointer" data-view="departments">
+          <span class="icon">📈</span> Dept Comparison
+        </div>
+        <div class="sidebar-item cursor-pointer" data-view="settings">
+          <span class="icon">⚙️</span> Settings
+        </div>
+      </nav>
+      <div class="divider"></div>
+      <button onclick="Auth.logout()" class="sidebar-item w-full text-left" style="background:none;border:none;color:var(--danger);cursor:pointer;">
+        <span class="icon">🚪</span> Logout
+      </button>
+    </aside>
+
+    <!-- ─── Main Content ───────────────────────────────────────────────────────── -->
+    <main class="main-content w-full" id="admin-main">
+      
+      <!-- ─── VIEW 1: OVERVIEW ────────────────────────────────────────────────── -->
+      <section id="view-overview" class="admin-view animate-fade-in">
+        <div class="mb-6">
+          <h1 class="text-2xl font-extrabold text-white mb-1">📊 System Overview</h1>
+          <p class="text-gray-400 text-sm">Real-time statistics and user registrations across CodeTracker.</p>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8 stagger-children">
+          <div class="stat-card">
+            <div class="stat-icon">👥</div>
+            <div class="stat-value" id="overview-total-users">—</div>
+            <div class="stat-label">Total Users</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">⚡</div>
+            <div class="stat-value" id="overview-active-users">—</div>
+            <div class="stat-label">Active This Month</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">🏆</div>
+            <div class="stat-value" id="overview-contests-tracked">—</div>
+            <div class="stat-label">Contests Tracked</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">🏫</div>
+            <div class="stat-value" id="overview-depts-count">—</div>
+            <div class="stat-label">Departments</div>
+          </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          <!-- Dept Doughnut -->
+          <div class="glass-card p-6 col-span-1 flex flex-col justify-between">
+            <h3 class="text-md font-bold mb-4 text-white">Users by Department</h3>
+            <div class="relative w-full flex justify-center items-center" style="height: 250px;">
+              <canvas id="chart-users-dept"></canvas>
+            </div>
+          </div>
+          <!-- Section Bar -->
+          <div class="glass-card p-6 col-span-1 flex flex-col justify-between">
+            <h3 class="text-md font-bold mb-4 text-white">Users by Section</h3>
+            <div class="relative w-full flex justify-center items-center" style="height: 250px;">
+              <canvas id="chart-users-section"></canvas>
+            </div>
+          </div>
+          <!-- Year Bar -->
+          <div class="glass-card p-6 col-span-1 flex flex-col justify-between">
+            <h3 class="text-md font-bold mb-4 text-white">Users by Academic Year</h3>
+            <div class="relative w-full flex justify-center items-center" style="height: 250px;">
+              <canvas id="chart-users-year"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Signups -->
+        <div class="glass-card p-6">
+          <h3 class="text-md font-bold mb-4 text-white">🆕 Recent Signups</h3>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Department</th>
+                  <th>Section</th>
+                  <th>Year</th>
+                  <th>Joined Date</th>
+                </tr>
+              </thead>
+              <tbody id="overview-recent-signups-body">
+                <tr>
+                  <td colspan="6" class="text-center py-6 text-gray-500">Loading recent registrations...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─── VIEW 2: USER MANAGEMENT ────────────────────────────────────────── -->
+      <section id="view-users" class="admin-view hidden animate-fade-in">
+        <div class="mb-6">
+          <h1 class="text-2xl font-extrabold text-white mb-1">👥 User Management</h1>
+          <p class="text-gray-400 text-sm">View, edit, promote, or delete student profiles registered in the system.</p>
+        </div>
+
+        <!-- Filter bar -->
+        <div class="glass-card p-6 mb-6">
+          <div class="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+            <div class="form-group">
+              <label class="form-label">Search</label>
+              <div class="search-bar">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="users-search" class="form-input" placeholder="Name, email, username..." />
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Department</label>
+              <select id="users-filter-dept" class="form-input">
+                <option value="">All Departments</option>
+                <option value="CSE">CSE</option>
+                <option value="AI&DS">AI&DS</option>
+                <option value="AI&ML">AI&ML</option>
+                <option value="CSBS">CSBS</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Section</label>
+              <select id="users-filter-section" class="form-input">
+                <option value="">All Sections</option>
+                <option value="A">A</option>
+                <option value="B">B</option>
+                <option value="C">C</option>
+                <option value="None">None</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Year</label>
+              <select id="users-filter-year" class="form-input">
+                <option value="">All Years</option>
+                <option value="1st year">1st Year</option>
+                <option value="2nd year">2nd Year</option>
+                <option value="3rd year">3rd Year</option>
+                <option value="final year">Final Year</option>
+              </select>
+            </div>
+            <div class="flex gap-2">
+              <button id="users-btn-clear" class="btn btn-ghost btn-sm flex-1">Clear</button>
+              <button id="users-btn-search" class="btn btn-primary btn-sm flex-1">Apply</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Users Table -->
+        <div class="glass-card p-6">
+          <div class="flex justify-between items-center mb-4">
+            <div class="text-gray-400 text-sm" id="users-total-count">0 users found</div>
+            <div class="form-group flex-row items-center gap-2">
+              <span class="text-xs text-gray-500 font-semibold">SORT BY:</span>
+              <select id="users-sort" class="form-input text-xs" style="width: auto; padding: 4px 10px;">
+                <option value="joined">Date Joined</option>
+                <option value="name">Name</option>
+                <option value="department">Department</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="table-container mb-4">
+            <table>
+              <thead>
+                <tr>
+                  <th>Student Info</th>
+                  <th>Department</th>
+                  <th>Section</th>
+                  <th>Year</th>
+                  <th>Platforms</th>
+                  <th>Role</th>
+                  <th style="text-align: right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="users-table-body">
+                <tr>
+                  <td colspan="7" class="text-center py-8 text-gray-500">Loading student accounts...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Pagination -->
+          <div class="flex justify-between items-center mt-4">
+            <div class="text-gray-500 text-xs" id="users-pagination-text">Showing page 1 of 1</div>
+            <div class="flex gap-2" id="users-pagination-controls">
+              <button class="btn btn-secondary btn-sm disabled" id="users-pagination-prev">Previous</button>
+              <button class="btn btn-secondary btn-sm disabled" id="users-pagination-next">Next</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─── VIEW 3: CONTEST ANALYTICS ──────────────────────────────────────── -->
+      <section id="view-contests" class="admin-view hidden animate-fade-in">
+        <!-- Step 1: Contest List View -->
+        <div id="contest-list-container">
+          <div class="mb-6">
+            <h1 class="text-2xl font-extrabold text-white mb-1">🏆 Contest Analytics</h1>
+            <p class="text-gray-400 text-sm">Select an upcoming contest to see snapshots, or click a past contest to view attendance and reports.</p>
+          </div>
+
+          <!-- Tabs for upcoming vs past -->
+          <div class="flex justify-start gap-4 mb-6">
+            <button id="contests-tab-past" class="px-5 py-2.5 rounded-lg font-bold bg-indigo-600 text-white transition-all">🕘 Past Contests</button>
+            <button id="contests-tab-upcoming" class="px-5 py-2.5 rounded-lg font-bold bg-gray-800 text-gray-400 hover:text-white transition-all">📅 Upcoming Contests</button>
+          </div>
+
+          <!-- Platform Filter -->
+          <div class="glass-card p-6 mb-6">
+            <div class="flex flex-wrap gap-4 items-center">
+              <span class="text-xs text-gray-400 font-bold uppercase tracking-wider">Filter by Platform:</span>
+              <button class="filter-pill contest-platform-filter active" data-platform="">🌐 All</button>
+              <button class="filter-pill contest-platform-filter" data-platform="LeetCode">⚡ LeetCode</button>
+              <button class="filter-pill contest-platform-filter" data-platform="CodeForces">🔵 Codeforces</button>
+              <button class="filter-pill contest-platform-filter" data-platform="CodeChef">👨‍🍳 CodeChef</button>
+              <button class="filter-pill contest-platform-filter" data-platform="AtCoder">🔴 AtCoder</button>
+            </div>
+          </div>
+
+          <!-- Contest Cards Grid -->
+          <div id="contests-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="skeleton" style="height:140px;border-radius:16px;"></div>
+            <div class="skeleton" style="height:140px;border-radius:16px;"></div>
+          </div>
+        </div>
+
+        <!-- Step 2: Contest Drilldown Panel (hidden on start) -->
+        <div id="contest-drilldown-container" class="hidden">
+          <div class="mb-4">
+            <button id="drilldown-back-btn" class="text-indigo-400 font-semibold flex items-center gap-1 hover:underline cursor-pointer mb-2">
+              ← Back to Contest List
+            </button>
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h1 class="text-2xl font-extrabold text-white flex items-center gap-2 mb-1">
+                  <span id="drilldown-platform-icon">🏅</span> 
+                  <span id="drilldown-contest-name">—</span>
+                </h1>
+                <p class="text-gray-400 text-sm">
+                  Platform: <span id="drilldown-platform-badge">—</span> · Date: <span id="drilldown-date">—</span>
+                </p>
+              </div>
+              <div class="flex gap-2">
+                <button id="drilldown-btn-csv" class="btn btn-secondary btn-sm">📥 Download CSV Report</button>
+                <button id="drilldown-btn-print" class="btn btn-primary btn-sm">📄 Download PDF Report</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Summary Bar -->
+          <div class="glass-card p-6 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-center">
+              <div class="border-r border-gray-800 last:border-none">
+                <p class="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">Total Users Tracked</p>
+                <h2 class="text-xl font-extrabold text-white" id="drilldown-stat-tracked">—</h2>
+              </div>
+              <div class="border-r border-gray-800 last:border-none">
+                <p class="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">✅ Attended</p>
+                <h2 class="text-xl font-extrabold text-emerald-400" id="drilldown-stat-attended">—</h2>
+              </div>
+              <div class="border-r border-gray-800 last:border-none">
+                <p class="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">❌ Not Attended</p>
+                <h2 class="text-xl font-extrabold text-red-400" id="drilldown-stat-unattended">—</h2>
+              </div>
+              <div>
+                <p class="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">📊 Attendance Rate</p>
+                <h2 class="text-xl font-extrabold text-indigo-400" id="drilldown-stat-rate">—%</h2>
+              </div>
+            </div>
+          </div>
+
+          <!-- Drilldown Filters -->
+          <div class="glass-card p-6 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div class="form-group">
+                <label class="form-label">Department Filter</label>
+                <select id="drilldown-filter-dept" class="form-input">
+                  <option value="">All Departments</option>
+                  <option value="CSE">CSE</option>
+                  <option value="AI&DS">AI&DS</option>
+                  <option value="AI&ML">AI&ML</option>
+                  <option value="CSBS">CSBS</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Section Filter</label>
+                <select id="drilldown-filter-section" class="form-input">
+                  <option value="">All Sections</option>
+                  <option value="A">A</option>
+                  <option value="B">B</option>
+                  <option value="C">C</option>
+                  <option value="None">None</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Academic Year Filter</label>
+                <select id="drilldown-filter-year" class="form-input">
+                  <option value="">All Years</option>
+                  <option value="1st year">1st Year</option>
+                  <option value="2nd year">2nd Year</option>
+                  <option value="3rd year">3rd Year</option>
+                  <option value="final year">Final Year</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Side-by-side tables -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <!-- Attended List -->
+            <div class="glass-card p-6">
+              <h3 class="text-md font-bold mb-4 text-emerald-400 flex items-center gap-2">
+                <span>✅</span> Attended Users (<span id="drilldown-attended-count">0</span>)
+              </h3>
+              <div class="table-container max-h-[400px] overflow-y-auto">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Dept</th>
+                      <th>Sec</th>
+                      <th>Year</th>
+                    </tr>
+                  </thead>
+                  <tbody id="drilldown-attended-table-body">
+                    <tr>
+                      <td colspan="4" class="text-center py-6 text-gray-500">No users found.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Not Attended List -->
+            <div class="glass-card p-6">
+              <h3 class="text-md font-bold mb-4 text-red-400 flex items-center gap-2">
+                <span>❌</span> Not Attended Users (<span id="drilldown-unattended-count">0</span>)
+              </h3>
+              <div class="table-container max-h-[400px] overflow-y-auto">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Dept</th>
+                      <th>Sec</th>
+                      <th>Year</th>
+                    </tr>
+                  </thead>
+                  <tbody id="drilldown-unattended-table-body">
+                    <tr>
+                      <td colspan="4" class="text-center py-6 text-gray-500">No users found.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Drilldown breakdown charts -->
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+            <div class="glass-card p-6 flex flex-col justify-between">
+              <h3 class="text-sm font-bold text-white mb-4">Attendance Rate by Dept (%)</h3>
+              <div class="relative w-full flex justify-center items-center" style="height: 200px;">
+                <canvas id="chart-drilldown-dept"></canvas>
+              </div>
+            </div>
+            <div class="glass-card p-6 flex flex-col justify-between">
+              <h3 class="text-sm font-bold text-white mb-4">Attended vs Not Attended by Section</h3>
+              <div class="relative w-full flex justify-center items-center" style="height: 200px;">
+                <canvas id="chart-drilldown-section"></canvas>
+              </div>
+            </div>
+            <div class="glass-card p-6 flex flex-col justify-between">
+              <h3 class="text-sm font-bold text-white mb-4">Attendance by Academic Year</h3>
+              <div class="relative w-full flex justify-center items-center" style="height: 200px;">
+                <canvas id="chart-drilldown-year"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─── VIEW 4: DEPARTMENT COMPARISON ──────────────────────────────────── -->
+      <section id="view-departments" class="admin-view hidden animate-fade-in">
+        <div class="mb-6">
+          <h1 class="text-2xl font-extrabold text-white mb-1">📈 Department Comparison</h1>
+          <p class="text-gray-400 text-sm">Compare contest engagement, coding ratings, and platform activity between college departments.</p>
+        </div>
+
+        <!-- Metric Toggles -->
+        <div class="glass-card p-6 mb-6">
+          <div class="flex flex-wrap gap-4 items-center">
+            <span class="text-xs text-gray-400 font-bold uppercase tracking-wider">Comparison Metric:</span>
+            <button class="filter-pill dept-metric-toggle active" data-metric="totalAttendance">Total Attendances</button>
+            <button class="filter-pill dept-metric-toggle" data-metric="avgAttendance">Avg Attendance per Student</button>
+            <button class="filter-pill dept-metric-toggle" data-metric="avgLcSolved">Avg LeetCode Solved</button>
+            <button class="filter-pill dept-metric-toggle" data-metric="avgCfRating">Avg Codeforces Rating</button>
+          </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <!-- Bar comparison -->
+          <div class="glass-card p-6 flex flex-col justify-between">
+            <h3 class="text-md font-bold mb-4 text-white" id="comparison-bar-title">Department Comparison</h3>
+            <div class="relative w-full flex justify-center items-center" style="height: 300px;">
+              <canvas id="chart-dept-comparison-bar"></canvas>
+            </div>
+          </div>
+          <!-- Radar comparison -->
+          <div class="glass-card p-6 flex flex-col justify-between">
+            <h3 class="text-md font-bold mb-4 text-white">Department Radar (Multi-Platform Metrics)</h3>
+            <div class="relative w-full flex justify-center items-center" style="height: 300px;">
+              <canvas id="chart-dept-comparison-radar"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Comparison table -->
+        <div class="glass-card p-6">
+          <h3 class="text-md font-bold mb-4 text-white">📋 Department Statistics Summary</h3>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Department</th>
+                  <th>Linked Students</th>
+                  <th>Total Attendances</th>
+                  <th>Avg Attendance/Student</th>
+                  <th>Avg LeetCode Solved</th>
+                  <th>Avg Codeforces Rating</th>
+                  <th>Avg Platforms Linked</th>
+                </tr>
+              </thead>
+              <tbody id="dept-comparison-table-body">
+                <tr>
+                  <td colspan="7" class="text-center py-6 text-gray-500">Loading comparison details...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─── VIEW 5: SETTINGS ───────────────────────────────────────────────── -->
+      <section id="view-settings" class="admin-view hidden animate-fade-in">
+        <div class="mb-6">
+          <h1 class="text-2xl font-extrabold text-white mb-1">⚙️ Administrative Settings</h1>
+          <p class="text-gray-400 text-sm">Download full system database logs, database backups, and manage configurations.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Exports card -->
+          <div class="glass-card p-6">
+            <h3 class="text-md font-bold mb-2 text-white">📥 Bulk Database Exports</h3>
+            <p class="text-gray-400 text-xs mb-6">Download complete csv records of users and their automated contest history.</p>
+            
+            <div class="flex flex-col gap-4">
+              <div class="flex justify-between items-center p-3 rounded-lg bg-gray-800/40 border border-gray-800">
+                <div>
+                  <h4 class="text-sm font-semibold text-white">Export Users Database</h4>
+                  <p class="text-xs text-gray-500">Includes names, emails, departments, sections, and linked profiles.</p>
+                </div>
+                <button id="settings-export-users" class="btn btn-secondary btn-sm">Export CSV</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Info card -->
+          <div class="glass-card p-6 flex flex-col justify-between">
+            <div>
+              <h3 class="text-md font-bold mb-2 text-white">🛡️ Admin Promotion Info</h3>
+              <p class="text-gray-400 text-xs mb-6">How to promote or manage other system admin accounts.</p>
+              
+              <div class="p-4 rounded-lg bg-indigo-950/20 border border-indigo-900/40 text-sm text-indigo-300">
+                <p class="font-semibold mb-2">👑 Managing Roles in MongoDB Atlas:</p>
+                <p class="text-xs leading-relaxed mb-3">
+                  To promote another student profile to an administrator, look up the student by their email inside the MongoDB Atlas <code>users</code> collection, and set their <code>role</code> field string value to:
+                </p>
+                <code class="block bg-gray-900 text-emerald-400 p-2 rounded text-center text-xs mb-2">role: "admin"</code>
+                <p class="text-xs text-indigo-400/80">
+                  Note: Demoting or deleting the final admin account from this admin portal is strictly protected by the system.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Admin Profile Settings -->
+          <div class="glass-card p-6 col-span-1 md:col-span-2">
+            <h3 class="text-md font-bold mb-4 text-white">👤 Admin Profile Settings</h3>
+            <form id="admin-profile-form" class="flex flex-col gap-4">
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="form-group">
+                  <label class="form-label">Full Name</label>
+                  <input type="text" id="admin-name" class="form-input" placeholder="Your Name" required />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Department</label>
+                  <select id="admin-dept" class="form-input">
+                    <option value="">Select Department</option>
+                    <option value="CSE">CSE - Computer Science and Engineering</option>
+                    <option value="AI&DS">AI&DS - Artificial Intelligence and Data Science</option>
+                    <option value="AI&ML">AI&ML - Artificial Intelligence and Machine Learning</option>
+                    <option value="CSBS">CSBS - Computer Science and Business Systems</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">College / University</label>
+                  <select id="admin-college" class="form-input">
+                    <option value="">Select College</option>
+                    <option value="KIT - Kalaignarkarunanidhi Institute of Technology">KIT - Kalaignarkarunanidhi Institute of Technology</option>
+                  </select>
+                </div>
+              </div>
+              <div class="flex justify-end mt-2">
+                <button type="submit" class="btn btn-primary btn-sm">💾 Save Profile</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ─── MODALS ───────────────────────────────────────────────────────────────── -->
+  <!-- Edit User Modal -->
+  <div class="admin-modal-overlay" id="modal-edit-user">
+    <div class="admin-modal">
+      <div class="flex justify-between items-center mb-6">
+        <h2 class="text-lg font-bold text-white">✏️ Edit Student Profile</h2>
+        <button id="edit-user-close" class="text-gray-400 hover:text-white text-xl">✕</button>
+      </div>
+
+      <form id="edit-user-form" class="flex flex-col gap-4">
+        <input type="hidden" id="edit-user-id" />
+        <div class="grid grid-cols-2 gap-4">
+          <div class="form-group col-span-2">
+            <label class="form-label">Name</label>
+            <input type="text" id="edit-user-name" class="form-input" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email</label>
+            <input type="email" id="edit-user-email" class="form-input" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Username</label>
+            <input type="text" id="edit-user-username" class="form-input" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Department</label>
+            <select id="edit-user-dept" class="form-input">
+              <option value="">None</option>
+              <option value="CSE">CSE</option>
+              <option value="AI&DS">AI&DS</option>
+              <option value="AI&ML">AI&ML</option>
+              <option value="CSBS">CSBS</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Section</label>
+            <select id="edit-user-section" class="form-input">
+              <option value="">None</option>
+              <option value="A">A</option>
+              <option value="B">B</option>
+              <option value="C">C</option>
+              <option value="None">None</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Year</label>
+            <select id="edit-user-year" class="form-input">
+              <option value="">None</option>
+              <option value="1st year">1st Year</option>
+              <option value="2nd year">2nd Year</option>
+              <option value="3rd year">3rd Year</option>
+              <option value="final year">Final Year</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">System Role</label>
+            <select id="edit-user-role" class="form-input">
+              <option value="user">Student</option>
+              <option value="admin">Administrator</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="flex gap-3 justify-end mt-4">
+          <button type="button" id="edit-user-cancel" class="btn btn-ghost btn-sm">Cancel</button>
+          <button type="submit" class="btn btn-primary btn-sm">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Delete User Confirm Modal -->
+  <div class="admin-modal-overlay" id="modal-delete-user">
+    <div class="admin-modal max-w-sm">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-md font-bold text-red-500">⚠️ Delete Account</h2>
+        <button id="delete-user-close" class="text-gray-400 hover:text-white">✕</button>
+      </div>
+      <p class="text-sm text-gray-300 mb-6 leading-relaxed">
+        Are you sure you want to permanently delete <strong id="delete-user-target-name">—</strong>'s account? This will also remove their questions log, contest snapshots, and attendance history. This action cannot be undone.
+      </p>
+      <input type="hidden" id="delete-user-id" />
+      <div class="flex gap-3 justify-end">
+        <button id="delete-user-cancel" class="btn btn-ghost btn-sm">Cancel</button>
+        <button id="delete-user-confirm" class="btn btn-danger btn-sm">Delete Forever</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/admin.js"></script>
+</body>
+</html>

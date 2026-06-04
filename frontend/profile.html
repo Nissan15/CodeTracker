@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Profile - CodeTracker</title>
+  <link rel="icon" href="assets/images/favicon.svg" type="image/svg+xml" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="assets/css/custom.css" />
+</head>
+<body class="dark">
+<script>
+  document.body.className = localStorage.getItem('codetracker_theme') || 'dark';
+</script>
+<div id="toast-container"></div>
+
+<!-- ─── Navbar ───────────────────────────────────────────────────────────────── -->
+<nav class="navbar">
+  <a href="index.html" class="navbar-brand">
+    <div class="logo-icon">⚡</div>
+    <span class="gradient-text">CodeTracker</span>
+  </a>
+  <div class="flex items-center gap-2">
+    <div id="auth-buttons" class="flex items-center gap-2">
+      <a href="login.html" class="btn btn-ghost btn-sm">Login</a>
+      <a href="login.html?tab=register" class="btn btn-primary btn-sm">Sign Up</a>
+    </div>
+    <div id="user-menu" class="flex items-center gap-2" style="display:none!important;">
+      <a href="dashboard.html" class="btn btn-secondary btn-sm">Dashboard</a>
+      <div class="dropdown" id="user-dropdown">
+        <button id="user-menu-trigger" class="flex items-center gap-2" style="background:none;border:none;cursor:pointer;">
+          <img id="user-avatar" src="" class="avatar avatar-sm" style="display:none" alt="avatar" />
+          <div id="user-initials" class="avatar-placeholder avatar-sm" style="font-size:0.75rem">U</div>
+          <span id="user-name" style="font-size:0.875rem;font-weight:500;color:var(--text-secondary)"></span>
+        </button>
+        <div class="dropdown-menu">
+          <a href="dashboard.html" class="dropdown-item">📊 Dashboard</a>
+          <div class="divider"></div>
+          <div class="dropdown-item" data-logout style="color:var(--danger)">🚪 Logout</div>
+        </div>
+      </div>
+    </div>
+    <button class="theme-toggle-btn btn btn-ghost btn-sm px-2.5" title="Toggle Theme">☀️</button>
+  </div>
+</nav>
+
+<!-- ─── Public Profile View ───────────────────────────────────────────────────── -->
+<div id="public-profile" style="display:none;">
+  <div id="profile-container">
+    <div style="max-width:900px;margin:0 auto;padding:60px 24px;text-align:center;">
+      <div class="spinner" style="width:40px;height:40px;border-width:3px;margin:0 auto;"></div>
+      <p style="color:var(--text-muted);margin-top:16px;">Loading profile...</p>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Own Profile / Settings View ──────────────────────────────────────────── -->
+<div id="own-profile" style="display:none;">
+  <div style="display:flex;">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <nav>
+        <a href="dashboard.html" class="sidebar-item"><span class="icon">📊</span> Dashboard</a>
+        <a href="contest-tracker.html" class="sidebar-item"><span class="icon">🏆</span> Contests</a>
+        <a href="profile.html" class="sidebar-item active"><span class="icon">👤</span> My Profile</a>
+      </nav>
+      <div class="divider"></div>
+      <button data-logout class="sidebar-item" style="width:100%;text-align:left;background:none;border:none;color:var(--danger);cursor:pointer;">
+        <span class="icon">🚪</span> Logout
+      </button>
+    </aside>
+
+    <!-- Main content -->
+    <main class="main-content">
+      <div style="margin-bottom:28px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+        <div>
+          <h1 style="font-size:1.6rem;font-weight:800;margin-bottom:4px;">👤 My Profile</h1>
+          <p style="color:var(--text-muted);font-size:0.875rem;">Manage your profile, platform usernames, and privacy settings.</p>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <input id="own-share-link" readonly class="form-input" style="font-size:0.75rem;padding:6px 10px;width:240px;" value="" />
+            <button onclick="copyLink()" class="btn btn-secondary btn-sm">📋 Copy</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Avatar + Preview -->
+      <div class="glass-card" style="padding:24px;margin-bottom:24px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
+        <img id="settings-avatar" src="https://api.dicebear.com/8.x/initials/svg?seed=User&backgroundColor=6366f1" class="avatar" style="width:80px;height:80px;border:3px solid var(--primary);" alt="Avatar" />
+        <div>
+          <h3 style="font-size:1rem;font-weight:700;margin-bottom:4px;" id="display-name">Your Name</h3>
+          <p style="font-size:0.8rem;color:var(--text-muted);">Profile picture is synced from Google or auto-generated.</p>
+        </div>
+      </div>
+
+      <!-- Settings Form -->
+      <form id="settings-form">
+
+        <!-- Basic Info -->
+        <div class="glass-card" style="padding:24px;margin-bottom:20px;">
+          <h2 style="font-size:1rem;font-weight:700;margin-bottom:20px;">📋 Basic Information</h2>
+          <div class="grid-2" style="gap:16px;">
+            <div class="form-group">
+              <label class="form-label">Full Name</label>
+              <input id="set-name" type="text" class="form-input" placeholder="Your full name" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Username</label>
+              <input id="set-username" type="text" class="form-input" placeholder="yourhandle" pattern="[a-z0-9_.\-]+" />
+              <small style="color:var(--text-muted);font-size:0.72rem;">Only lowercase letters, numbers, dots, underscores</small>
+            </div>
+            <div class="form-group" style="grid-column:1/-1;">
+              <label class="form-label">Bio</label>
+              <textarea id="set-bio" class="form-input" rows="2" placeholder="A short bio about yourself..."></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">College / University</label>
+              <select id="set-college" class="form-input">
+                <option value="">Select College</option>
+                <option value="KIT - Kalaignarkarunanidhi Institute of Technology">KIT - Kalaignarkarunanidhi Institute of Technology</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Department</label>
+              <select id="set-department" class="form-input">
+                <option value="">Select Department</option>
+                <option value="CSE">CSE - Computer Science and Engineering</option>
+                <option value="AI&DS">AI&DS - Aritificial Intelligence and Data Science</option>
+                <option value="AI&ML">AI&ML - Aritificial Intelligence and Machine Learning</option>
+                <option value="CSBS">CSBS - Computer Science and Business Systems</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Section</label>
+              <select id="set-section" class="form-input">
+                <option value="">Select Section</option>
+                <option value="A">A</option>
+                <option value="B">B</option>
+                <option value="C">C</option>
+                <option value="None">None</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Academic Year</label>
+              <select id="set-year" class="form-input">
+                <option value="">Select Academic Year</option>
+                <option value="1st year">1st Year</option>
+                <option value="2nd year">2nd Year</option>
+                <option value="3rd year">3rd Year</option>
+                <option value="final year">Final Year</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Location</label>
+              <input id="set-location" type="text" class="form-input" placeholder="New York, India..." />
+            </div>
+          </div>
+
+          <!-- Privacy Toggle -->
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:20px;padding:16px;background:rgba(255,255,255,0.03);border-radius:var(--radius-md);border:1px solid var(--border);">
+            <div>
+              <p style="font-weight:600;font-size:0.9rem;">Public Profile</p>
+              <p style="font-size:0.8rem;color:var(--text-muted);">Allow anyone with the link to view your profile</p>
+            </div>
+            <label style="position:relative;display:inline-block;width:46px;height:26px;cursor:pointer;">
+              <input type="checkbox" id="set-public" style="opacity:0;width:0;height:0;" checked />
+              <span style="position:absolute;inset:0;background:rgba(255,255,255,0.1);border-radius:26px;transition:0.3s;" id="toggle-track"></span>
+              <span style="position:absolute;top:3px;left:3px;width:20px;height:20px;background:#fff;border-radius:50%;transition:0.3s;" id="toggle-thumb"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Platform Usernames -->
+        <div class="glass-card" style="padding:24px;margin-bottom:20px;">
+          <h2 style="font-size:1rem;font-weight:700;margin-bottom:4px;">🌐 Platform Usernames</h2>
+          <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:20px;">Add your usernames to display live stats on your dashboard and profile.</p>
+          <div class="grid-2" style="gap:16px;">
+            <div class="form-group">
+              <label class="form-label" style="display:flex;align-items:center;gap:6px;"><span>⚡</span> LeetCode</label>
+              <input id="set-lc" type="text" class="form-input" placeholder="leetcode_username" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="display:flex;align-items:center;gap:6px;"><span>🔵</span> Codeforces</label>
+              <input id="set-cf" type="text" class="form-input" placeholder="codeforces_handle" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="display:flex;align-items:center;gap:6px;"><span>👨‍🍳</span> CodeChef</label>
+              <input id="set-cc" type="text" class="form-input" placeholder="codechef_username" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="display:flex;align-items:center;gap:6px;"><span>🟢</span> GeeksforGeeks</label>
+              <input id="set-gfg" type="text" class="form-input" placeholder="gfg_username" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="display:flex;align-items:center;gap:6px;"><span>🔴</span> AtCoder</label>
+              <input id="set-atcoder" type="text" class="form-input" placeholder="atcoder_username" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="display:flex;align-items:center;gap:6px;"><span>🐙</span> GitHub</label>
+              <input id="set-github" type="text" class="form-input" placeholder="github_username" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Social Links -->
+        <div class="glass-card" style="padding:24px;margin-bottom:20px;">
+          <h2 style="font-size:1rem;font-weight:700;margin-bottom:20px;">🔗 Social Links</h2>
+          <div class="grid-2" style="gap:16px;">
+            <div class="form-group">
+              <label class="form-label">💼 LinkedIn URL</label>
+              <input id="set-linkedin" type="url" class="form-input" placeholder="https://linkedin.com/in/..." />
+            </div>
+            <div class="form-group">
+              <label class="form-label">🐦 Twitter / X URL</label>
+              <input id="set-twitter" type="url" class="form-input" placeholder="https://twitter.com/..." />
+            </div>
+            <div class="form-group" style="grid-column:1/-1;">
+              <label class="form-label">🌐 Personal Website</label>
+              <input id="set-website" type="url" class="form-input" placeholder="https://yoursite.com" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Save Button -->
+        <div style="display:flex;justify-content:flex-end;gap:12px;">
+          <a href="dashboard.html" class="btn btn-ghost">Cancel</a>
+          <button type="submit" class="btn btn-primary btn-lg">💾 Save Changes</button>
+        </div>
+
+      </form>
+    </main>
+  </div>
+</div>
+
+<script src="assets/js/api.js"></script>
+<script src="assets/js/auth.js"></script>
+<script src="assets/js/profile.js"></script>
+<script>
+  function copyLink() {
+    const link = document.getElementById('own-share-link');
+    if (link) {
+      navigator.clipboard.writeText(link.value).then(() => showToast('Profile link copied!', 'success'));
+    }
+  }
+
+  // Toggle switch visual update
+  const toggle = document.getElementById('set-public');
+  const track = document.getElementById('toggle-track');
+  const thumb = document.getElementById('toggle-thumb');
+  if (toggle) {
+    const updateToggle = () => {
+      track.style.background = toggle.checked ? 'var(--primary)' : 'rgba(255,255,255,0.1)';
+      thumb.style.transform = toggle.checked ? 'translateX(20px)' : 'translateX(0)';
+    };
+    toggle.addEventListener('change', updateToggle);
+    updateToggle();
+  }
+</script>
+</body>
+</html>
