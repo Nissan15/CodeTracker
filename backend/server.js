@@ -25,18 +25,21 @@ connectDB().then(() => {
 });
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
+const isDev = process.env.NODE_ENV !== 'production';
+
 const ALLOWED_ORIGINS = [
   process.env.FRONTEND_URL,
-  'http://localhost:3000',
-  'http://localhost:5500',
-  'http://127.0.0.1:5500',
+  // Allow localhost only in development
+  ...(isDev
+    ? ['http://localhost:3000', 'http://localhost:5500', 'http://127.0.0.1:5500']
+    : []),
 ].filter(Boolean);
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      // 'null' string = file:// protocol, no origin = curl/mobile — allow in dev
-      if (!origin || origin === 'null' || ALLOWED_ORIGINS.includes(origin)) {
+      // 'null' string = file:// protocol, no origin = curl/mobile — allow in dev only
+      if (ALLOWED_ORIGINS.includes(origin) || (!origin && isDev) || (origin === 'null' && isDev)) {
         return callback(null, true);
       }
       callback(new Error(`CORS: Origin ${origin} not allowed`));
@@ -72,7 +75,7 @@ app.use(errorHandler);
 
 // ─── Start Server ─────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 CodeTracker Backend running on port ${PORT}`);
   console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`   Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`);
