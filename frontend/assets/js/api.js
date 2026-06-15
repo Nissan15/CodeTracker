@@ -1,9 +1,13 @@
 // ─── API Configuration ─────────────────────────────────────────────────────────
-// hostname is '' when opened via file://, 'localhost' or '127.0.0.1' via Live Server
+// In development: automatically uses localhost backend
+// In production (Vercel): uses your Render backend URL
 const isLocal = ['localhost', '127.0.0.1', ''].includes(window.location.hostname);
-const API_BASE = isLocal
-  ? 'http://localhost:5000'
-  : 'https://codetracker-backend.onrender.com'; // Update with your Render URL after deployment
+
+// ⚠️ IMPORTANT: Replace the URL below with your actual Render backend URL
+// Example: 'https://codetracker-backend-xxxx.onrender.com'
+const RENDER_BACKEND_URL = 'https://codetracker-backend.onrender.com';
+
+const API_BASE = isLocal ? 'http://localhost:5000' : RENDER_BACKEND_URL;
 
 // ─── Core API Request ─────────────────────────────────────────────────────────
 const apiRequest = async (endpoint, options = {}) => {

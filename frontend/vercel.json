@@ -9,10 +9,6 @@
       "destination": "/profile.html"
     },
     {
-      "source": "/question-tracker",
-      "destination": "/question-tracker.html"
-    },
-    {
       "source": "/contest-tracker",
       "destination": "/contest-tracker.html"
     },
@@ -44,6 +40,10 @@
         {
           "key": "X-XSS-Protection",
           "value": "1; mode=block"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
         }
       ]
     }
