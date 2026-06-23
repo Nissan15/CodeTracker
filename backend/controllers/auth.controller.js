@@ -8,43 +8,48 @@ const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRE || '7d' });
 };
 
-// Configure Passport Google Strategy
-passport.use(
-  new GoogleStrategy(
-    {
-      clientID: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: process.env.GOOGLE_CALLBACK_URL,
-    },
-    async (accessToken, refreshToken, profile, done) => {
-      try {
-        // Check if user already exists with this Google ID
-        let user = await User.findOne({ googleId: profile.id });
+// Configure Passport Google Strategy (only when credentials are available)
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && process.env.GOOGLE_CALLBACK_URL) {
+  passport.use(
+    new GoogleStrategy(
+      {
+        clientID: process.env.GOOGLE_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        callbackURL: process.env.GOOGLE_CALLBACK_URL,
+      },
+      async (accessToken, refreshToken, profile, done) => {
+        try {
+          // Check if user already exists with this Google ID
+          let user = await User.findOne({ googleId: profile.id });
 
-        if (!user) {
-          // Check if email already exists (link accounts)
-          user = await User.findOne({ email: profile.emails[0].value });
-          if (user) {
-            user.googleId = profile.id;
-            if (!user.avatar) user.avatar = profile.photos[0]?.value || '';
-            await user.save();
-          } else {
-            // Create new user
-            user = await User.create({
-              googleId: profile.id,
-              name: profile.displayName,
-              email: profile.emails[0].value,
-              avatar: profile.photos[0]?.value || '',
-            });
+          if (!user) {
+            // Check if email already exists (link accounts)
+            user = await User.findOne({ email: profile.emails[0].value });
+            if (user) {
+              user.googleId = profile.id;
+              if (!user.avatar) user.avatar = profile.photos[0]?.value || '';
+              await user.save();
+            } else {
+              // Create new user
+              user = await User.create({
+                googleId: profile.id,
+                name: profile.displayName,
+                email: profile.emails[0].value,
+                avatar: profile.photos[0]?.value || '',
+              });
+            }
           }
+          return done(null, user);
+        } catch (error) {
+          return done(error, null);
         }
-        return done(null, user);
-      } catch (error) {
-        return done(error, null);
       }
-    }
-  )
-);
+    )
+  );
+  console.log('✅ Google OAuth strategy configured');
+} else {
+  console.warn('⚠️  Google OAuth credentials not set — Google login will be unavailable');
+}
 
 // Register with email/password
 const register = async (req, res, next) => {
