@@ -18,10 +18,21 @@ const adminRoutes = require('./routes/admin.routes');
 
 const app = express();
 
-// Connect to MongoDB
+// ─── Startup Diagnostics ─────────────────────────────────────────────────────
+console.log('🔍 Startup diagnostics:');
+console.log(`   NODE_ENV     : ${process.env.NODE_ENV || '(not set)'}`);
+console.log(`   PORT         : ${process.env.PORT || '(not set, will use 5000)'}`);
+console.log(`   MONGODB_URI  : ${process.env.MONGODB_URI ? '✅ set' : '❌ MISSING'}`);
+console.log(`   JWT_SECRET   : ${process.env.JWT_SECRET ? '✅ set' : '❌ MISSING'}`);
+console.log(`   FRONTEND_URL : ${process.env.FRONTEND_URL || '(not set)'}`);
+console.log(`   GOOGLE_ID    : ${process.env.GOOGLE_CLIENT_ID ? '✅ set' : '⚠️  not set (Google OAuth disabled)'}`);
+
+// Connect to MongoDB (with retry — will NOT exit process on failure)
 connectDB().then(() => {
   // Start background cron jobs once DB is connected
   require('./cron');
+}).catch((err) => {
+  console.error('Unhandled error in connectDB:', err?.message);
 });
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
@@ -55,7 +66,17 @@ app.use(express.urlencoded({ extended: true }));
 app.use(passport.initialize());
 
 // ─── Routes ──────────────────────────────────────────────────────────────────
-app.get('/health', (req, res) => res.json({ status: 'OK', message: 'CodeTracker API is running 🚀' }));
+app.get('/health', (req, res) => {
+  const dbState = require('mongoose').connection.readyState;
+  // 0=disconnected, 1=connected, 2=connecting, 3=disconnecting
+  const dbStatus = ['disconnected', 'connected', 'connecting', 'disconnecting'][dbState] || 'unknown';
+  res.json({
+    status: 'OK',
+    message: 'CodeTracker API is running 🚀',
+    db: dbStatus,
+    env: process.env.NODE_ENV || 'development',
+  });
+});
 
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
